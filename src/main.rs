@@ -1,5 +1,9 @@
 use clap::Parser;
-use image::{io::Reader as ImageReader, GrayImage};
+use image::io::Reader as ImageReader;
+
+use crate::contour::ToContourFinder;
+
+mod contour;
 
 // Program to detect elongated particles on images
 #[derive(Parser, Debug)]
@@ -45,185 +49,17 @@ fn main() {
         }
     });
 
-    keep_contours(&mut img);
+    contour::keep_contours(&mut img);
+
+    let contours: Vec<_> = img
+        .clone()
+        .to_contour_finder()
+        .filter(|contour| contour.len() >= 5)
+        .collect();
+
+    println!("{:?}", contours);
 
     img.save("out.png").expect("Failed to save image");
 
     println!("Hello, world!");
-}
-
-fn keep_contours(img: &mut GrayImage) {
-    let mut from_left = img.clone();
-    from_left.rows_mut().for_each(|row| {
-        let mut is_inner = false;
-        for p in row.into_iter() {
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                is_inner = false;
-            }
-        }
-    });
-
-    let mut from_right = img.clone();
-    from_right.rows_mut().for_each(|row| {
-        let mut is_inner = false;
-        for p in row.into_iter().rev() {
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                is_inner = false;
-            }
-        }
-    });
-
-    let mut from_top = img.clone();
-    let w = from_top.width();
-    let h = from_top.height();
-    for i in 0..w {
-        let mut is_inner = false;
-        for j in 0..h {
-            let mut p = from_top.get_pixel_mut(i, j);
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                is_inner = false;
-            }
-        }
-    }
-
-    let mut from_bottom = img.clone();
-    for i in 0..w {
-        let mut is_inner = false;
-        for j in (0..h).rev() {
-            let mut p = from_bottom.get_pixel_mut(i, j);
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                is_inner = false;
-            }
-        }
-    }
-
-    img.enumerate_pixels_mut().for_each(|(i, j, p)| {
-        if from_left.get_pixel(i, j).0[0] == 0
-            || from_right.get_pixel(i, j).0[0] == 0
-            || from_top.get_pixel(i, j).0[0] == 0
-            || from_bottom.get_pixel(i, j).0[0] == 0
-        {
-            p.0[0] = 0;
-        } else {
-            p.0[0] = 255;
-        }
-    });
-}
-
-fn keep_contours_thick(img: &mut GrayImage) {
-    let mut from_left = img.clone();
-    from_left.rows_mut().for_each(|row| {
-        let mut is_inner = false;
-        for p in row.into_iter() {
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                if is_inner {
-                    p.0[0] = 0;
-                }
-                is_inner = false;
-            }
-        }
-    });
-
-    let mut from_right = img.clone();
-    from_right.rows_mut().for_each(|row| {
-        let mut is_inner = false;
-        for p in row.into_iter().rev() {
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                if is_inner {
-                    p.0[0] = 0;
-                }
-                is_inner = false;
-            }
-        }
-    });
-
-    let mut from_top = img.clone();
-    let w = from_top.width();
-    let h = from_top.height();
-    for i in 0..w {
-        let mut is_inner = false;
-        for j in 0..h {
-            let mut p = from_top.get_pixel_mut(i, j);
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                if is_inner {
-                    p.0[0] = 0;
-                }
-                is_inner = false;
-            }
-        }
-    }
-
-    let mut from_bottom = img.clone();
-    for i in 0..w {
-        let mut is_inner = false;
-        for j in (0..h).rev() {
-            let mut p = from_bottom.get_pixel_mut(i, j);
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                if is_inner {
-                    p.0[0] = 0;
-                }
-                is_inner = false;
-            }
-        }
-    }
-
-    img.enumerate_pixels_mut().for_each(|(i, j, p)| {
-        if from_left.get_pixel(i, j).0[0] == 0
-            || from_right.get_pixel(i, j).0[0] == 0
-            || from_top.get_pixel(i, j).0[0] == 0
-            || from_bottom.get_pixel(i, j).0[0] == 0
-        {
-            p.0[0] = 0;
-        } else {
-            p.0[0] = 255;
-        }
-    });
 }
