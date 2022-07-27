@@ -1,9 +1,13 @@
 use clap::Parser;
 use image::{io::Reader as ImageReader, Rgb, Rgba};
 use imageproc::{
-    contours::{find_contours, Contour},
+    contours::{find_contours, BorderType, Contour},
     drawing::{draw_polygon, draw_polygon_mut},
     point::Point,
+};
+use opencv::{
+    core::{Point_, Vector},
+    imgproc::fit_ellipse_direct,
 };
 
 use crate::fit_ellipse::fit_ellipse_dls;
@@ -40,36 +44,37 @@ fn main() {
         .save("binarized.png")
         .expect("Failed to save image");
 
-    let contours: Vec<Contour<u32>> = find_contours(&img_binarized)
+    let contours: Vec<Vector<Point_<i32>>> = find_contours(&img_binarized)
         .into_iter()
         .filter(|c| c.points.len() >= 50 && c.points.len() <= 2000)
+        .filter(|c| c.border_type == BorderType::Hole)
+        .map(|c: Contour<i32>| {
+            let ps = c
+                .points
+                .clone()
+                .into_iter()
+                .map(|p: Point<_>| Point_::new(p.x as i32, p.y as i32))
+                .collect();
+            ps
+        })
         .collect();
-    println!("{} contours found", contours.len());
+
     let mut with_contours = img.clone();
     for contour in contours.iter() {
         draw_polygon_mut(
             &mut with_contours,
             &contour
-                .points
-                .clone()
                 .into_iter()
-                .map(|p| Point::new(p.x as i32, p.y as i32))
-                .collect::<Vec<Point<i32>>>()[..],
+                .map(|p| Point::new(p.x, p.y))
+                .collect::<Vec<_>>()[..],
             Rgba([255u8, 0, 0, 255]),
         );
-        break;
     }
     with_contours
         .save("contours.png")
         .expect("Failed to save image");
 
-    let dpoints = contours[0]
-        .points
-        .clone()
-        .into_iter()
-        .map(|p| Point::new(p.x as f64, p.y as f64))
-        .collect::<Vec<Point<f64>>>();
-    fit_ellipse_dls(&dpoints);
+    let fit_res = fit_ellipse_direct(&contours[0]).expect("Failed to fit ellipse");
 
     println!("Hello, world!");
 }
