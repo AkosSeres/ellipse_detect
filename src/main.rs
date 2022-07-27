@@ -1,7 +1,10 @@
 use clap::Parser;
-use image::io::Reader as ImageReader;
-
-use crate::contour::ToContourFinder;
+use image::{io::Reader as ImageReader, Rgb, Rgba};
+use imageproc::{
+    contours::{find_contours, Contour},
+    drawing::{draw_polygon, draw_polygon_mut},
+    point::Point,
+};
 
 mod contour;
 
@@ -14,7 +17,7 @@ struct Args {
     file: String,
 
     /// Threshold for binarization
-    #[clap(short, long, value_parser, default_value = "55")]
+    #[clap(short, long, value_parser, default_value = "35")]
     threshold: u8,
 }
 
@@ -26,40 +29,34 @@ fn main() {
         .decode()
         .expect("Failed to decode image");
 
-    let mut img = img.to_luma8();
-    img.pixels_mut()
+    let mut img_binarized = img.to_luma8();
+    img_binarized
+        .pixels_mut()
         .for_each(|p| p.0[0] = if p.0[0] > args.threshold { 255 } else { 0 });
+    img_binarized
+        .save("binarized.png")
+        .expect("Failed to save image");
 
-    let mut from_left = img.clone();
-    from_left.rows_mut().for_each(|row| {
-        let mut is_inner = false;
-        for p in row.into_iter() {
-            if p.0[0] == 0 {
-                if !is_inner {
-                    is_inner = true;
-                } else {
-                    p.0[0] = 255;
-                }
-            } else {
-                if is_inner {
-                    p.0[0] = 0;
-                }
-                is_inner = false;
-            }
-        }
-    });
-
-    contour::keep_contours(&mut img);
-
-    let contours: Vec<_> = img
-        .clone()
-        .to_contour_finder()
-        .filter(|contour| contour.len() >= 5)
+    let contours: Vec<Contour<u32>> = find_contours(&img_binarized)
+        .into_iter()
+        .filter(|c| c.points.len() >= 50 && c.points.len() <= 2000)
         .collect();
-
-    println!("{:?}", contours);
-
-    img.save("out.png").expect("Failed to save image");
+    println!("{} contours found", contours.len());
+    let mut with_contours = img.clone();
+    for contour in contours {
+        draw_polygon_mut(
+            &mut with_contours,
+            &contour
+                .points
+                .into_iter()
+                .map(|p| Point::new(p.x as i32, p.y as i32))
+                .collect::<Vec<Point<i32>>>()[..],
+            Rgba([255u8, 0, 0, 255]),
+        );
+    }
+    with_contours
+        .save("contours.png")
+        .expect("Failed to save image");
 
     println!("Hello, world!");
 }

@@ -1,6 +1,4 @@
-use std::iter::from_fn;
-
-use image::{buffer::EnumeratePixels, GenericImageView, GrayImage};
+use image::GrayImage;
 
 pub fn keep_contours(img: &mut GrayImage) {
     let mut from_left = img.clone();
