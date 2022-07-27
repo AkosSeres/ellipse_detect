@@ -6,7 +6,10 @@ use imageproc::{
     point::Point,
 };
 
+use crate::fit_ellipse::fit_ellipse_dls;
+
 mod contour;
+mod fit_ellipse;
 
 // Program to detect elongated particles on images
 #[derive(Parser, Debug)]
@@ -43,20 +46,30 @@ fn main() {
         .collect();
     println!("{} contours found", contours.len());
     let mut with_contours = img.clone();
-    for contour in contours {
+    for contour in contours.iter() {
         draw_polygon_mut(
             &mut with_contours,
             &contour
                 .points
+                .clone()
                 .into_iter()
                 .map(|p| Point::new(p.x as i32, p.y as i32))
                 .collect::<Vec<Point<i32>>>()[..],
             Rgba([255u8, 0, 0, 255]),
         );
+        break;
     }
     with_contours
         .save("contours.png")
         .expect("Failed to save image");
+
+    let dpoints = contours[0]
+        .points
+        .clone()
+        .into_iter()
+        .map(|p| Point::new(p.x as f64, p.y as f64))
+        .collect::<Vec<Point<f64>>>();
+    fit_ellipse_dls(&dpoints);
 
     println!("Hello, world!");
 }
