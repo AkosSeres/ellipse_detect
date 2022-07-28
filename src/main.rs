@@ -1,19 +1,17 @@
 use clap::Parser;
-use image::{io::Reader as ImageReader, Rgb, Rgba};
+use image::{io::Reader as ImageReader, Rgba};
 use imageproc::{
     contours::{find_contours, BorderType, Contour},
-    drawing::{draw_polygon, draw_polygon_mut},
+    drawing::draw_hollow_polygon_mut,
     point::Point,
 };
-use opencv::{
-    core::{Point_, Vector},
-    imgproc::fit_ellipse_direct,
-};
+use opencv::core::{Point_, Vector};
 
-use crate::fit_ellipse::fit_ellipse_dls;
+use crate::robust_fit::robust_fit_ellipse;
 
 mod contour;
 mod fit_ellipse;
+mod robust_fit;
 
 // Program to detect elongated particles on images
 #[derive(Parser, Debug)]
@@ -61,11 +59,11 @@ fn main() {
 
     let mut with_contours = img.clone();
     for contour in contours.iter() {
-        draw_polygon_mut(
+        draw_hollow_polygon_mut(
             &mut with_contours,
             &contour
                 .into_iter()
-                .map(|p| Point::new(p.x, p.y))
+                .map(|p| Point::new(p.x as f32, p.y as f32))
                 .collect::<Vec<_>>()[..],
             Rgba([255u8, 0, 0, 255]),
         );
@@ -74,7 +72,32 @@ fn main() {
         .save("contours.png")
         .expect("Failed to save image");
 
-    let fit_res = fit_ellipse_direct(&contours[0]).expect("Failed to fit ellipse");
-
+    let mut img_with_fits = with_contours.clone();
+    for contour in contours.iter() {
+        let fit_res = robust_fit_ellipse(&contour);
+        for ellipse in fit_res.iter() {
+            let res = 40;
+            let ellipse_poly = (0..40)
+                .into_iter()
+                .map(|i| {
+                    let angle = (i as f32 / res as f32) * 2.0 * std::f32::consts::PI;
+                    let x = ellipse.a as f32 * angle.cos();
+                    let y = ellipse.b as f32 * angle.sin();
+                    let rotangle = ellipse.theta as f32;
+                    let x_rot = x * rotangle.cos() - y * rotangle.sin();
+                    let y_rot = x * rotangle.sin() + y * rotangle.cos();
+                    Point::new(x_rot + ellipse.x as f32, y_rot + ellipse.y as f32)
+                })
+                .collect::<Vec<Point<f32>>>();
+            draw_hollow_polygon_mut(
+                &mut img_with_fits,
+                &ellipse_poly[..],
+                Rgba([0u8, 0, 255, 255]),
+            );
+        }
+    }
+    img_with_fits
+        .save("fits.png")
+        .expect("Failed to save image");
     println!("Hello, world!");
 }
