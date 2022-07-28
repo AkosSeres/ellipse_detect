@@ -143,7 +143,7 @@ impl Ellipse {
 
 /// Robust ellipse fit on noisy data, based on
 /// Kaewapichai, W. and Kaewtrakulpong, P., 2008. Robust ellipse detection by fitting randomly selected edge patches. World Academy of Science, Engineering, and Technology, 48, pp.30-33.
-pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
+pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
     let mut cont = cont.clone();
     let err: f64 = 0.6;
     let d = 2.0;
@@ -167,14 +167,15 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
             while added < 5 {
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
-                let distance = (p1 - p2).norm();
+                let distance = (*p1 - *p2).norm();
                 if distance > min_r * 2.0 && distance < 50.0 {
                     sample.push(p1.clone());
                     sample.push(p2.clone());
                     sample.extend(
                         cont.iter()
-                            .filter(|&p| (p - p1).norm() <= min_r || (p - p2).norm() <= min_r)
-                            .filter(|&p| p != p1 && p != p2),
+                            .filter(|&p| (*p - *p1).norm() <= min_r || (*p - *p2).norm() <= min_r)
+                            .filter(|&p| p != p1 && p != p2)
+                            .copied(),
                     );
                     added += 2;
                 }
@@ -225,6 +226,7 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
                 let distance = best_ellipse.distance_from_perimeter(point.x as f64, point.y as f64);
                 distance >= d
             })
+            .copied()
             .collect();
     }
 
