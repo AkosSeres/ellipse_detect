@@ -6,6 +6,7 @@ use imageproc::{
     point::Point,
 };
 use opencv::core::Point_;
+use rayon::prelude::*;
 
 use crate::robust_fit::robust_fit_ellipse;
 
@@ -74,7 +75,7 @@ fn main() {
 
     println!("Start fitting...");
     let fit_results = contours[..]
-        .iter()
+        .par_iter()
         .map(robust_fit_ellipse)
         .collect::<Vec<_>>();
     println!("Done fitting!");

@@ -13,3 +13,4 @@ imageproc = { git = "https://github.com/image-rs/imageproc", branch = "master" }
 nalgebra = "0.31.0"
 num-complex = "0.4.2"
 opencv = "0.66.0"
+rayon = "1.5.3"
