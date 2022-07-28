@@ -1,3 +1,4 @@
+use nalgebra::{Complex, ComplexField};
 use opencv::{
     core::{Point_, RotatedRect, Vector},
     imgproc::fit_ellipse_direct,
@@ -29,7 +30,11 @@ impl From<RotatedRect> for Ellipse {
 }
 
 impl Ellipse {
-    fn perimeter(&self) -> f64 {
+    pub fn new(x: f64, y: f64, a: f64, b: f64, theta: f64) -> Self {
+        Ellipse { x, y, a, b, theta }
+    }
+
+    pub fn perimeter(&self) -> f64 {
         2.0 * std::f64::consts::PI * (self.a * self.a + self.b * self.b).sqrt()
     }
 
@@ -44,49 +49,95 @@ impl Ellipse {
     }
 
     /// Distance of (px, py) point from the ellipse.
-    /// Based on:
-    /// Chatfield, Carl. “Simple Method for Distance to Ellipse.” Wet Robots. Wet Robots, August 28, 2017. https://blog.chatfield.io/simple-method-for-distance-to-ellipse/.
-    fn distance_from_perimeter(&self, px_: f64, py_: f64) -> f64 {
+    /// Taken from:
+    /// Chou, C.C., 2019. A closed-form general solution for the distance of point-to-ellipse in two dimensions. Journal of Interdisciplinary Mathematics, 22(3), pp.337-351.
+    pub fn distance_from_perimeter(&self, px_: f64, py_: f64) -> f64 {
         let px_ = px_ - self.x;
         let py_ = py_ - self.y;
         let (px_, py_) = (
             (-self.theta).cos() * px_ - (-self.theta).sin() * py_,
             (-self.theta).sin() * px_ + (-self.theta).cos() * py_,
         );
-        let px = px_.abs();
-        let py = py_.abs();
+        let xp = Complex::new(px_, 0.0);
+        let yp = Complex::new(py_, 0.0);
 
-        let mut t = if self.is_inside(px, py) {
-            py.atan2(px)
-        } else {
-            std::f64::consts::PI / 4.0
-        };
+        let (a, b) = (Complex::from(self.a), Complex::from(self.b));
+        let c = a.powi(6) - 2.0 * a.powi(4) * b * b + a * a * b.powi(4)
+            - a.powi(4) * xp * xp
+            - a * a * b * b * yp * yp;
+        let d = a * a - b * b;
+        let e = a.powi(4) - 2.0 * a * a * b * b + b.powi(4) - a * a * xp * xp - b * b * yp * yp;
+        let f = -108.0 * a.powi(8) * d.powi(4) * xp * xp
+            + 108.0 * a.powi(10) * d * d * xp.powi(4)
+            + 108.0 * a.powi(6) * d * d * xp * xp * c
+            + 2.0 * c.powi(3);
+        let g = (2.0.powf(1.0 / 3.0) * e * e)
+            / (3.0 * a * a * xp * xp * (f + (f * f - 4.0 * c.powi(6)).sqrt()).powf(1.0 / 3.0));
+        let h = ((f + (f * f - 4.0 * c.powi(6)).sqrt()).powf(1.0 / 3.0))
+            / (3.0 * 2.0.powf(1.0 / 3.0) * a.powi(6) * xp * xp);
+        let i = e / (a.powi(4) * xp * xp);
+        let j = c / (3.0 * a.powi(6) * xp * xp);
+        let k = d / (a * a * xp);
+        let m = j + g + h;
 
-        let a = self.a;
-        let b = self.b;
-        let mut x = 0.0;
-        let mut y = 0.0;
+        let X1 = 0.5
+            * (k - Complex::sqrt(k * k - i + m)
+                - Complex::sqrt(
+                    2.0 * (k * k)
+                        - i
+                        - m
+                        - (8.0 * k * (k * k - (2.0 / (a * a)) - i)
+                            / (4.0 * Complex::sqrt(k * k - i + m))),
+                ));
+        let X2 = 0.5
+            * (k - Complex::sqrt(k * k - i + m)
+                + Complex::sqrt(
+                    2.0 * (k * k)
+                        - i
+                        - m
+                        - (8.0 * k * (k * k - (2.0 / (a * a)) - i)
+                            / (4.0 * Complex::sqrt(k * k - i + m))),
+                ));
+        let X3 = 0.5
+            * (k + Complex::sqrt(k * k - i + m)
+                - Complex::sqrt(
+                    2.0 * (k * k) - i - m
+                        + (8.0 * k * (k * k - (2.0 / (a * a)) - i)
+                            / (4.0 * Complex::sqrt(k * k - i + m))),
+                ));
+        let X4 = 0.5
+            * (k + Complex::sqrt(k * k - i + m)
+                + Complex::sqrt(
+                    2.0 * (k * k) - i - m
+                        + (8.0 * k * (k * k - (2.0 / (a * a)) - i)
+                            / (4.0 * Complex::sqrt(k * k - i + m))),
+                ));
+        let Y1 = ((a * a) * xp * X1 + (b * b) - (a * a)) / ((b * b) * yp);
+        let Y2 = ((a * a) * xp * X2 + (b * b) - (a * a)) / ((b * b) * yp);
+        let Y3 = ((a * a) * xp * X3 + (b * b) - (a * a)) / ((b * b) * yp);
+        let Y4 = ((a * a) * xp * X4 + (b * b) - (a * a)) / ((b * b) * yp);
+        let (xt1, yt1) = (1.0 / X1, 1.0 / Y1);
+        let (xt2, yt2) = (1.0 / X2, 1.0 / Y2);
+        let (xt3, yt3) = (1.0 / X3, 1.0 / Y3);
+        let (xt4, yt4) = (1.0 / X4, 1.0 / Y4);
+        let PT1 = ((xt1 - xp).powi(2) + (yt1 - yp).powi(2)).sqrt();
+        let PT2 = ((xt2 - xp).powi(2) + (yt2 - yp).powi(2)).sqrt();
+        let PT3 = ((xt3 - xp).powi(2) + (yt3 - yp).powi(2)).sqrt();
+        let PT4 = ((xt4 - xp).powi(2) + (yt4 - yp).powi(2)).sqrt();
+        let lengths = [PT1, PT2, PT3, PT4]
+            .iter()
+            .filter(|l| l.im < 0.01 && l.im > -0.01)
+            .map(|l| l.re)
+            .collect::<Vec<_>>();
 
-        for _ in 0..10 {
-            x = a * t.cos();
-            y = b * t.sin();
-            let ex = (a * a - b * b) * (t.cos().powi(3)) / a;
-            let ey = (b * b - a * a) * (t.sin().powi(3)) / b;
-            let rx = x - ex;
-            let ry = y - ey;
-            let qx = px - ex;
-            let qy = py - ey;
-            let r = ry.hypot(rx);
-            let q = qy.hypot(qx);
-            let delta_c = r * ((rx * qy - ry * qx) / (r * q)).asin();
-            let delta_t = delta_c / (a * a + b * b - x * x - y * y).sqrt();
-            t += delta_t;
-            t = (std::f64::consts::PI * 0.5).min(t.max(0.0));
+        if lengths.len() == 0 {
+            return PT1.re.min(PT4.re);
         }
 
-        let dx = x.copysign(px_);
-        let dy = y.copysign(py_);
-        (dx * dx + dy * dy).sqrt()
+        let min_len = lengths
+            .iter()
+            .fold(f64::INFINITY, |prev, curr| prev.min(*curr));
+        min_len
     }
 }
 
@@ -95,7 +146,7 @@ impl Ellipse {
 pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
     let mut cont = cont.clone();
     let err: f64 = 0.6;
-    let d = 3.0;
+    let d = 2.0;
     let pvalue = 1. - err.powf(5.0);
     let K = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 2.) as usize;
     let min_r = 6.0;
@@ -117,12 +168,12 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let distance = (p1 - p2).norm();
-                if distance > min_r * 2.0 && distance < 40.0 {
+                if distance > min_r * 2.0 && distance < 50.0 {
                     sample.push(p1.clone());
                     sample.push(p2.clone());
                     sample.extend(
                         cont.iter()
-                            .filter(|&p| (p - p1).norm() <= min_r || (p - p2).norm() > min_r)
+                            .filter(|&p| (p - p1).norm() <= min_r || (p - p2).norm() <= min_r)
                             .filter(|&p| p != p1 && p != p2),
                     );
                     added += 2;
@@ -135,8 +186,9 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
             let pred11 = e.a >= 45.0 || e.b >= 45.0;
             let pred12 = e.a <= 65.0 || e.b <= 65.0;
             let aspect = if e.a > e.b { e.a / e.b } else { e.b / e.a };
-            let pred2 = aspect >= 3.0;
-            return pred11 && pred12 && pred2;
+            let pred21 = aspect >= 3.0;
+            let pred22 = aspect <= 5.0;
+            return pred11 && pred12 && pred21 && pred22;
         };
         let ellipses = samples
             .iter()
@@ -144,26 +196,17 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
             .filter(ellipse_filter)
             .collect::<Vec<_>>();
 
-        let perimeters: Vec<f64> = ellipses.iter().map(Ellipse::perimeter).collect();
         let fitnesses = ellipses
             .iter()
-            .zip(perimeters.into_iter())
-            .map(|(e, p)| {
+            .map(|e| {
                 cont.iter()
                     .filter(|point| e.distance_from_perimeter(point.x as f64, point.y as f64) <= d)
                     .count() as f64
-                    / p
+                    / e.perimeter()
             })
             .collect::<Vec<f64>>();
 
-        let dists = cont
-            .iter()
-            .map(|p| ellipses[6].distance_from_perimeter(p.x as f64, p.y as f64))
-            .collect::<Vec<f64>>();
-        println!("{:?}", dists);
-        println!("{:?}", fitnesses);
-
-        if fitnesses.len() == 0 || fitnesses.iter().any(|&f| f <= min_fittness) {
+        if fitnesses.len() == 0 || !fitnesses.iter().any(|&f| f >= min_fittness) {
             break;
         }
 
@@ -180,7 +223,7 @@ pub fn robust_fit_ellipse(cont: &Vector<Point_<i32>>) -> Vec<Ellipse> {
             .iter()
             .filter(|point| {
                 let distance = best_ellipse.distance_from_perimeter(point.x as f64, point.y as f64);
-                distance > d
+                distance >= d
             })
             .collect();
     }
