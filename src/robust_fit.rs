@@ -197,11 +197,16 @@ pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
             .filter(ellipse_filter)
             .collect::<Vec<_>>();
 
+        let cont_f64 = cont
+            .iter()
+            .map(|p| Point_::new(p.x as f64, p.y as f64))
+            .collect::<Vec<_>>();
         let fitnesses = ellipses
             .iter()
             .map(|e| {
-                cont.iter()
-                    .filter(|point| e.distance_from_perimeter(point.x as f64, point.y as f64) <= d)
+                cont_f64
+                    .iter()
+                    .filter(|point| e.distance_from_perimeter(point.x.into(), point.y.into()) <= d)
                     .count() as f64
                     / e.perimeter()
             })
