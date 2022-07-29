@@ -1,9 +1,7 @@
+use imageproc::point::Point;
 use nalgebra::{Complex, ComplexField};
-use opencv::{
-    core::{Point_, RotatedRect, Vector},
-    imgproc::fit_ellipse_direct,
-    prelude::RotatedRectTraitConst,
-};
+
+use crate::fit_ellipse::fit_ellipse_dls;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ellipse {
@@ -12,21 +10,6 @@ pub struct Ellipse {
     pub x: f64,
     pub y: f64,
     pub theta: f64,
-}
-
-impl From<RotatedRect> for Ellipse {
-    fn from(rect: RotatedRect) -> Self {
-        let size = rect.size();
-        let center = rect.center();
-        let angle = rect.angle();
-        Ellipse {
-            a: size.width as f64 / 2.0,
-            b: size.height as f64 / 2.0,
-            x: center.x as f64,
-            y: center.y as f64,
-            theta: (angle / 180.0 * std::f32::consts::PI) as f64,
-        }
-    }
 }
 
 impl Ellipse {
@@ -143,7 +126,7 @@ impl Ellipse {
 
 /// Robust ellipse fit on noisy data, based on
 /// Kaewapichai, W. and Kaewtrakulpong, P., 2008. Robust ellipse detection by fitting randomly selected edge patches. World Academy of Science, Engineering, and Technology, 48, pp.30-33.
-pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
+pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
     let mut cont = cont.clone();
     let err: f64 = 0.6;
     let d = 2.0;
@@ -160,9 +143,9 @@ pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
             break;
         }
         prev_cont_len = cont.len();
-        let mut samples: Vec<Vector<Point_<i32>>> = Vec::with_capacity(K);
+        let mut samples: Vec<Vec<Point<f64>>> = Vec::with_capacity(K);
         for _ in 0..K {
-            let mut sample: Vector<Point_<i32>> = Vector::new();
+            let mut sample: Vec<Point<f64>> = vec![];
             let mut added = 0;
             while added < 5 {
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
@@ -191,26 +174,22 @@ pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
             let pred22 = aspect <= 5.0;
             return pred11 && pred12 && pred21 && pred22;
         };
+
         let ellipses = samples
             .iter()
-            .map(|s| Ellipse::from(fit_ellipse_direct(s).unwrap()))
+            .filter_map(|s| fit_ellipse_dls(&s[..]))
             .filter(ellipse_filter)
             .collect::<Vec<_>>();
 
-        let cont_f64 = cont
-            .iter()
-            .map(|p| Point_::new(p.x as f64, p.y as f64))
-            .collect::<Vec<_>>();
         let fitnesses = ellipses
             .iter()
             .map(|e| {
-                cont_f64
-                    .iter()
-                    .filter(|point| e.distance_from_perimeter(point.x.into(), point.y.into()) <= d)
+                cont.iter()
+                    .filter(|point| e.distance_from_perimeter(point.x, point.y) <= d)
                     .count() as f64
                     / e.perimeter()
             })
-            .collect::<Vec<f64>>();
+            .collect::<Vec<_>>();
 
         if fitnesses.len() == 0 || !fitnesses.iter().any(|&f| f >= min_fittness) {
             break;
@@ -228,7 +207,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
         cont = cont
             .iter()
             .filter(|point| {
-                let distance = best_ellipse.distance_from_perimeter(point.x as f64, point.y as f64);
+                let distance = best_ellipse.distance_from_perimeter(point.x, point.y);
                 distance >= d
             })
             .copied()
@@ -236,4 +215,14 @@ pub fn robust_fit_ellipse(cont: &Vec<Point_<i32>>) -> Vec<Ellipse> {
     }
 
     best_ellipses
+}
+
+trait Norm {
+    fn norm(&self) -> f64;
+}
+
+impl Norm for Point<f64> {
+    fn norm(&self) -> f64 {
+        (self.x * self.x + self.y * self.y).sqrt()
+    }
 }

@@ -5,7 +5,6 @@ use imageproc::{
     drawing::draw_hollow_polygon_mut,
     point::Point,
 };
-use opencv::core::Point_;
 use rayon::prelude::*;
 
 use crate::robust_fit::robust_fit_ellipse;
@@ -43,20 +42,20 @@ fn main() {
         .save("binarized.png")
         .expect("Failed to save image");
 
-    let contours: Vec<Vec<Point_<i32>>> = find_contours(&img_binarized)
+    let contours: Vec<Vec<Point<f64>>> = find_contours(&img_binarized)
         .into_iter()
         .filter(|c| c.points.len() >= 50 && c.points.len() <= 2000)
         .filter(|c| c.border_type == BorderType::Hole)
         .map(|c: Contour<i32>| {
             let ps = c
                 .points
-                .clone()
-                .into_iter()
-                .map(|p: Point<_>| Point_::new(p.x as i32, p.y as i32))
-                .collect();
+                .iter()
+                .copied()
+                .map(|p: Point<_>| Point::new(p.x.into(), p.y.into()))
+                .collect::<Vec<_>>();
             ps
         })
-        .collect();
+        .collect::<Vec<_>>();
 
     let mut with_contours = img.clone();
     for contour in contours.iter() {
