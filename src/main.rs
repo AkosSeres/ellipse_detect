@@ -1,7 +1,7 @@
 use clap::Parser;
 use image::{io::Reader as ImageReader, Rgba};
 use imageproc::{
-    contours::{find_contours, BorderType, Contour},
+    contours::{find_contours_with_threshold, BorderType, Contour},
     drawing::draw_hollow_polygon_mut,
     point::Point,
 };
@@ -33,16 +33,9 @@ fn main() {
         .expect("Failed to open image")
         .decode()
         .expect("Failed to decode image");
+    let img_flat = img.to_luma8();
 
-    let mut img_binarized = img.to_luma8();
-    img_binarized
-        .pixels_mut()
-        .for_each(|p| p.0[0] = if p.0[0] > args.threshold { 255 } else { 0 });
-    img_binarized
-        .save("binarized.png")
-        .expect("Failed to save image");
-
-    let contours: Vec<Vec<Point<f64>>> = find_contours(&img_binarized)
+    let contours: Vec<Vec<Point<f64>>> = find_contours_with_threshold(&img_flat, args.threshold)
         .into_iter()
         .filter(|c| c.points.len() >= 50 && c.points.len() <= 2000)
         .filter(|c| c.border_type == BorderType::Hole)
@@ -57,29 +50,12 @@ fn main() {
         })
         .collect::<Vec<_>>();
 
-    let mut with_contours = img.clone();
-    for contour in contours.iter() {
-        draw_hollow_polygon_mut(
-            &mut with_contours,
-            &contour
-                .into_iter()
-                .map(|p| Point::new(p.x as f32, p.y as f32))
-                .collect::<Vec<_>>()[..],
-            Rgba([255u8, 0, 0, 255]),
-        );
-    }
-    with_contours
-        .save("contours.png")
-        .expect("Failed to save image");
-
-    println!("Start fitting...");
     let fit_results = contours[..]
         .par_iter()
         .map(robust_fit_ellipse)
         .collect::<Vec<_>>();
-    println!("Done fitting!");
 
-    let mut img_with_fits = with_contours.clone();
+    let mut img_with_fits = img.clone();
     for fit_res in fit_results.iter() {
         for ellipse in fit_res.iter() {
             let res = 40;
@@ -105,5 +81,4 @@ fn main() {
     img_with_fits
         .save("fits.png")
         .expect("Failed to save image");
-    println!("Hello, world!");
 }

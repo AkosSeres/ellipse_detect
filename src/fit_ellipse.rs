@@ -27,7 +27,7 @@ pub fn fit_ellipse_dls(points: &[Point<f64>]) -> Option<Ellipse> {
     let to_eig_orig = S * C;
     // Find eigenvlues using the QR algorithm
     let mut to_eig = to_eig_orig.hessenberg().h();
-    for _ in 0..100 {
+    for _ in 0..20 {
         let qr = to_eig.qr();
         to_eig = qr.r() * qr.q();
     }
@@ -39,7 +39,7 @@ pub fn fit_ellipse_dls(points: &[Point<f64>]) -> Option<Ellipse> {
     // Then find the eigenvector using the inverse iteration method
     let mut eigvec = Vector6::from_element(1.0).normalize();
     let iter_mat = (to_eig_orig - pos_eigval * Matrix6::identity()).try_inverse()?;
-    for _ in 0..100 {
+    for _ in 0..20 {
         eigvec = iter_mat * eigvec;
         eigvec.normalize_mut();
     }
