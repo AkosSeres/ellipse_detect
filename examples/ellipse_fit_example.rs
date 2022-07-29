@@ -5,8 +5,9 @@ use imageproc::{
 };
 
 use opencv::{
-    core::{Point_, Vector},
+    core::{Point_, RotatedRect, Vector},
     imgproc::fit_ellipse_direct,
+    prelude::RotatedRectTraitConst,
 };
 use particle_detect::{fit_ellipse::fit_ellipse_dls, robust_fit::Ellipse};
 
@@ -24,7 +25,8 @@ fn main() {
         Point_::new(34, 65),
         Point_::new(39, 85),
     ]);
-    let ellipse = Ellipse::from(fit_ellipse_direct(&points).expect("Failed to fit ellipse"));
+    let ellipse =
+        Ellipse::from_rotated_rect(fit_ellipse_direct(&points).expect("Failed to fit ellipse"));
 
     figure.pixels_mut().for_each(|p| p.0 = [255, 255, 255]);
 
@@ -55,4 +57,23 @@ fn main() {
     figure.save("figure.png").expect("Failed to save image");
 
     println!("Hello, world!");
+}
+
+trait FromRotatedRect {
+    fn from_rotated_rect(rect: RotatedRect) -> Self;
+}
+
+impl FromRotatedRect for Ellipse {
+    fn from_rotated_rect(rect: RotatedRect) -> Self {
+        let size = rect.size();
+        let center = rect.center();
+        let angle = rect.angle();
+        Ellipse {
+            a: size.width as f64 / 2.0,
+            b: size.height as f64 / 2.0,
+            x: center.x as f64,
+            y: center.y as f64,
+            theta: (angle / 180.0 * std::f32::consts::PI) as f64,
+        }
+    }
 }
