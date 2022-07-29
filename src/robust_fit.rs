@@ -10,11 +10,22 @@ pub struct Ellipse {
     pub x: f64,
     pub y: f64,
     pub theta: f64,
+    axis_a: Point<f64>,
+    axis_b: Point<f64>,
 }
 
 impl Ellipse {
     pub fn new(x: f64, y: f64, a: f64, b: f64, theta: f64) -> Self {
-        Ellipse { x, y, a, b, theta }
+        let (tsin, tcos) = theta.sin_cos();
+        Ellipse {
+            x,
+            y,
+            a,
+            b,
+            theta,
+            axis_a: Point::new(tcos, tsin),
+            axis_b: Point::new(-tsin, tcos),
+        }
     }
 
     pub fn perimeter(&self) -> f64 {
@@ -130,8 +141,8 @@ impl Ellipse {
         let px_ = px_ - self.x;
         let py_ = py_ - self.y;
         let (px_orig, py_orig) = (
-            (-self.theta).cos() * px_ - (-self.theta).sin() * py_,
-            (-self.theta).sin() * px_ + (-self.theta).cos() * py_,
+            px_ * self.axis_a.x + py_ * self.axis_a.y,
+            px_ * self.axis_b.x + py_ * self.axis_b.y,
         );
         let px = px_orig.abs();
         let py = py_orig.abs();
