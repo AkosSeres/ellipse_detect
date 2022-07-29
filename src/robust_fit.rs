@@ -187,7 +187,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
     let err: f64 = 0.6;
     let d = 2.0;
     let pvalue = 1. - err.powf(5.0);
-    let K = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 2.) as usize;
+    let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 2.) as usize;
     let min_r = 6.0;
     let min_fittness = 0.3;
     let mut best_ellipses: Vec<Ellipse> = vec![];
@@ -199,8 +199,8 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
             break;
         }
         prev_cont_len = cont.len();
-        let mut samples: Vec<Vec<Point<f64>>> = Vec::with_capacity(K);
-        for _ in 0..K {
+        let mut samples: Vec<Vec<Point<f64>>> = Vec::with_capacity(k);
+        for _ in 0..k {
             let mut sample: Vec<Point<f64>> = vec![];
             let mut added = 0;
             while added < 5 {
@@ -208,12 +208,9 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let distance = (*p1 - *p2).norm();
                 if distance > min_r * 2.0 && distance < 50.0 {
-                    sample.push(p1.clone());
-                    sample.push(p2.clone());
                     sample.extend(
                         cont.iter()
                             .filter(|&p| (*p - *p1).norm() <= min_r || (*p - *p2).norm() <= min_r)
-                            .filter(|&p| p != p1 && p != p2)
                             .copied(),
                     );
                     added += 2;
