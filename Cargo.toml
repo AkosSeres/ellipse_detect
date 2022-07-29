@@ -14,3 +14,9 @@ nalgebra = "0.31.0"
 num-complex = "0.4.2"
 opencv = "0.66.0"
 rayon = "1.5.3"
+
+# [profile.release]
+# codegen-units = 1
+# strip = true
+# lto = true
+# panic = "abort"
