@@ -122,6 +122,51 @@ impl Ellipse {
             .fold(f64::INFINITY, |prev, curr| prev.min(*curr));
         min_len
     }
+
+    /// Distance of (px, py) point from the ellipse, iteratively estimated.
+    /// Taken from:
+    /// Chatfield, Carl. “Simple Method for Distance to Ellipse.” Wet Robots. Wet Robots, August 28, 2017. https://blog.chatfield.io/simple-method-for-distance-to-ellipse/.
+    pub fn distance_from_perimeter_estimate(&self, px_: f64, py_: f64) -> f64 {
+        let px_ = px_ - self.x;
+        let py_ = py_ - self.y;
+        let (px_orig, py_orig) = (
+            (-self.theta).cos() * px_ - (-self.theta).sin() * py_,
+            (-self.theta).sin() * px_ + (-self.theta).cos() * py_,
+        );
+        let px = px_orig.abs();
+        let py = py_orig.abs();
+
+        let mut t = py.atan2(px);
+
+        let a = self.a;
+        let b = self.b;
+
+        let mut x = 0.0;
+        let mut y = 0.0;
+
+        for _ in 0..3 {
+            x = a * t.cos();
+            y = b * t.sin();
+
+            let ex = (a * a - b * b) * t.cos().powi(3) / a;
+            let ey = (b * b - a * a) * t.sin().powi(3) / b;
+            let rx = x - ex;
+            let ry = y - ey;
+            let qx = px - ex;
+            let qy = py - ey;
+            let r = ry.hypot(rx);
+            let q = qy.hypot(qx);
+            let delta_c = r * ((rx * qy - ry * qx) / (r * q)).asin();
+            let delta_t = delta_c / (a * a + b * b - x * x - y * y).sqrt();
+            t += delta_t;
+            t = (std::f64::consts::PI / 2.0).min(t.max(0.0));
+        }
+
+        let dx = x - px;
+        let dy = y - py;
+
+        (dx * dx + dy * dy).sqrt()
+    }
 }
 
 /// Robust ellipse fit on noisy data, based on
@@ -185,7 +230,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
             .iter()
             .map(|e| {
                 cont.iter()
-                    .filter(|point| e.distance_from_perimeter(point.x, point.y) <= d)
+                    .filter(|point| e.distance_from_perimeter_estimate(point.x, point.y) <= d)
                     .count() as f64
                     / e.perimeter()
             })
@@ -207,7 +252,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
         cont = cont
             .iter()
             .filter(|point| {
-                let distance = best_ellipse.distance_from_perimeter(point.x, point.y);
+                let distance = best_ellipse.distance_from_perimeter_estimate(point.x, point.y);
                 distance >= d
             })
             .copied()

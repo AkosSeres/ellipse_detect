@@ -10,7 +10,7 @@ fn main() {
     figure.enumerate_pixels_mut().for_each(|(x, y, p)| {
         let x = x as f64;
         let y = y as f64;
-        let d = ellipse.distance_from_perimeter(x, y);
+        let d = ellipse.distance_from_perimeter_estimate(x, y);
         p.0[0] = (255.0 * ((d / 5.).tanh())) as u8;
     });
 
