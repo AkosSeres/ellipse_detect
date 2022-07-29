@@ -68,12 +68,12 @@ impl FromRotatedRect for Ellipse {
         let size = rect.size();
         let center = rect.center();
         let angle = rect.angle();
-        Ellipse {
-            a: size.width as f64 / 2.0,
-            b: size.height as f64 / 2.0,
-            x: center.x as f64,
-            y: center.y as f64,
-            theta: (angle / 180.0 * std::f32::consts::PI) as f64,
-        }
+        Ellipse::new(
+            center.x as f64,
+            center.y as f64,
+            size.width as f64 / 2.0,
+            size.height as f64 / 2.0,
+            (angle / 180.0 * std::f32::consts::PI) as f64,
+        )
     }
 }
