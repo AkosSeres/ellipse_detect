@@ -1,58 +1,53 @@
+use crate::fit_args::FitArgs;
 use clap::Parser;
 use image::{io::Reader as ImageReader, Rgba};
 use imageproc::{
-    contours::{find_contours_with_threshold, BorderType, Contour},
+    contours::{find_contours_with_threshold, Contour},
     drawing::draw_hollow_polygon_mut,
     point::Point,
 };
+use particle_detect::fit_args::CliArgs;
 use rayon::prelude::*;
 
 use crate::robust_fit::robust_fit_ellipse;
 
 mod contour;
+mod fit_args;
 mod fit_ellipse;
 mod robust_fit;
 
-// Program to detect elongated particles on images
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    /// Pathname of the image to open
-    #[clap(short, long, value_parser)]
-    file: String,
-
-    /// Threshold for binarization
-    #[clap(short, long, value_parser, default_value = "35")]
-    threshold: u8,
-}
-
 fn main() {
-    let args = Args::parse();
+    let cli_args = CliArgs::parse();
+    let config_file = std::fs::read_to_string(cli_args.config).unwrap();
+    let fit_args = serde_yaml::from_str::<FitArgs>(&config_file).unwrap();
 
-    let img = ImageReader::open(args.file)
+    let img = ImageReader::open(cli_args.file.clone())
         .expect("Failed to open image")
         .decode()
         .expect("Failed to decode image");
     let img_flat = img.to_luma8();
 
-    let contours: Vec<Vec<Point<f64>>> = find_contours_with_threshold(&img_flat, args.threshold)
-        .into_iter()
-        .filter(|c| c.points.len() >= 50 && c.points.len() <= 2000)
-        .filter(|c| c.border_type == BorderType::Hole)
-        .map(|c: Contour<i32>| {
-            let ps = c
-                .points
-                .iter()
-                .copied()
-                .map(|p: Point<_>| Point::new(p.x.into(), p.y.into()))
-                .collect::<Vec<_>>();
-            ps
-        })
-        .collect::<Vec<_>>();
+    let contours: Vec<Vec<Point<f64>>> =
+        find_contours_with_threshold(&img_flat, fit_args.threshold)
+            .into_iter()
+            .filter(|c| {
+                c.points.len() >= fit_args.min_contour_points
+                    && c.points.len() <= fit_args.max_contour_points
+            })
+            .map(|c: Contour<i32>| {
+                let ps = c
+                    .points
+                    .iter()
+                    .copied()
+                    .map(|p: Point<_>| Point::new(p.x.into(), p.y.into()))
+                    .collect::<Vec<_>>();
+                ps
+            })
+            .collect::<Vec<_>>();
 
     let fit_results = contours[..]
         .par_iter()
-        .map(robust_fit_ellipse)
+        .map(|ps| robust_fit_ellipse(ps, &fit_args))
         .collect::<Vec<_>>();
 
     let mut img_with_fits = img.clone();
@@ -79,6 +74,13 @@ fn main() {
         }
     }
     img_with_fits
-        .save("fits.png")
+        .save(
+            cli_args
+                .file
+                .to_str()
+                .unwrap()
+                .to_owned()
+                .replace(".bmp", ".jpg"),
+        )
         .expect("Failed to save image");
 }

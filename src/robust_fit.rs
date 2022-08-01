@@ -1,7 +1,7 @@
 use imageproc::point::Point;
 use nalgebra::{Complex, ComplexField};
 
-use crate::fit_ellipse::fit_ellipse_dls;
+use crate::{fit_args::FitArgs, fit_ellipse::fit_ellipse_dls};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ellipse {
@@ -182,14 +182,25 @@ impl Ellipse {
 
 /// Robust ellipse fit on noisy data, based on
 /// Kaewapichai, W. and Kaewtrakulpong, P., 2008. Robust ellipse detection by fitting randomly selected edge patches. World Academy of Science, Engineering, and Technology, 48, pp.30-33.
-pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
+pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse> {
+    let mut center_of_mass = cont.iter().fold(Point::new(0.0, 0.0), |acc, p| acc + *p);
+    center_of_mass.x /= cont.len() as f64;
+    center_of_mass.y /= cont.len() as f64;
+    center_of_mass.x -= args.rotation_center_x;
+    center_of_mass.y -= args.rotation_center_y;
+    if center_of_mass.norm() < args.detect_radius_min
+        || center_of_mass.norm() > args.detect_radius_max
+    {
+        return vec![];
+    }
+
     let mut cont = cont.clone();
     let err: f64 = 0.6;
-    let d = 2.0;
+    let d = args.dist_threshold;
     let pvalue = 1. - err.powf(5.0);
     let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 2.) as usize;
-    let min_r = 6.0;
-    let min_fittness = 0.3;
+    let min_r = args.radius_threshold;
+    let min_fittness = args.min_fitness;
     let mut best_ellipses: Vec<Ellipse> = vec![];
 
     let mut prev_cont_len = 0;
@@ -207,7 +218,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let distance = (*p1 - *p2).norm();
-                if distance > min_r * 2.0 && distance < 50.0 {
+                if distance > min_r * 2.0 && distance < min_r * 10.0 {
                     sample.extend(
                         cont.iter()
                             .filter(|&p| (*p - *p1).norm() <= min_r || (*p - *p2).norm() <= min_r)
@@ -220,12 +231,16 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>) -> Vec<Ellipse> {
         }
 
         let ellipse_filter = |e: &Ellipse| {
-            let pred11 = e.a >= 45.0 || e.b >= 45.0;
-            let pred12 = e.a <= 65.0 || e.b <= 65.0;
-            let aspect = if e.a > e.b { e.a / e.b } else { e.b / e.a };
-            let pred21 = aspect >= 3.0;
-            let pred22 = aspect <= 5.0;
-            return pred11 && pred12 && pred21 && pred22;
+            let length = e.a.max(e.b) * 2.0;
+            let width = e.a.min(e.b) * 2.0;
+            let pred11 = length >= args.min_length;
+            let pred12 = length <= args.max_length;
+            let pred13 = width >= args.min_width;
+            let pred14 = width <= args.max_width;
+            let aspect = length / width;
+            let pred21 = aspect >= args.min_aspect_ratio;
+            let pred22 = aspect <= args.max_aspect_ratio;
+            return pred11 && pred12 && pred13 && pred14 && pred21 && pred22;
         };
 
         let ellipses = samples
