@@ -1,16 +1,19 @@
 use imageproc::point::Point;
 use nalgebra::{Complex, ComplexField};
+use serde::Serialize;
 
 use crate::{fit_args::FitArgs, fit_ellipse::fit_ellipse_dls};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Ellipse {
     pub a: f64,
     pub b: f64,
     pub x: f64,
     pub y: f64,
     pub theta: f64,
+    #[serde(skip_serializing)]
     axis_a: Point<f64>,
+    #[serde(skip_serializing)]
     axis_b: Point<f64>,
 }
 
@@ -198,7 +201,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse
     let err: f64 = 0.6;
     let d = args.dist_threshold;
     let pvalue = 1. - err.powf(5.0);
-    let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 2.) as usize;
+    let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 50.) as usize;
     let min_r = args.radius_threshold;
     let min_fittness = args.min_fitness;
     let mut best_ellipses: Vec<Ellipse> = vec![];

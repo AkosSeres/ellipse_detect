@@ -48,11 +48,18 @@ fn main() {
     let fit_results = contours[..]
         .par_iter()
         .map(|ps| robust_fit_ellipse(ps, &fit_args))
+        .flatten()
         .collect::<Vec<_>>();
 
-    let mut img_with_fits = img.clone();
-    for fit_res in fit_results.iter() {
-        for ellipse in fit_res.iter() {
+    if let Some(outfile) = cli_args.outfile {
+        let mut outfile = std::fs::File::create(outfile).expect("Failed to create output file");
+        serde_json::to_writer_pretty(&mut outfile, &fit_results)
+            .expect("Failed to write output file");
+    }
+
+    if let Some(outimg) = cli_args.outimg {
+        let mut img_with_fits = img.clone();
+        for ellipse in fit_results.iter() {
             let res = 40;
             let ellipse_poly = (0..40)
                 .into_iter()
@@ -72,15 +79,6 @@ fn main() {
                 Rgba([0u8, 0, 255, 255]),
             );
         }
+        img_with_fits.save(outimg).expect("Failed to save image");
     }
-    img_with_fits
-        .save(
-            cli_args
-                .file
-                .to_str()
-                .unwrap()
-                .to_owned()
-                .replace(".bmp", ".jpg"),
-        )
-        .expect("Failed to save image");
 }

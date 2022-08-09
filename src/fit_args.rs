@@ -13,6 +13,16 @@ pub struct CliArgs {
     /// Pathname of the config file for filtering
     #[clap(short, long, value_parser)]
     pub config: PathBuf,
+
+    /// Pathname for the output JSON file
+    /// If not specified, the output file is omitted
+    #[clap(long, value_parser)]
+    pub outfile: Option<PathBuf>,
+
+    /// Pathname for the output image file
+    /// If not specified, the output image is omitted
+    #[clap(long, value_parser)]
+    pub outimg: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
