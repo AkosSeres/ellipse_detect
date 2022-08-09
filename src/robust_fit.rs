@@ -217,11 +217,13 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse
         for _ in 0..k {
             let mut sample: Vec<Point<f64>> = vec![];
             let mut added = 0;
+            let mut adding_tries = 0;
             while added < 5 {
+                adding_tries += 1;
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let distance = (*p1 - *p2).norm();
-                if distance > min_r * 2.0 && distance < min_r * 10.0 {
+                if (distance > min_r * 2.0 && distance < min_r * 10.0) || adding_tries > 100 {
                     sample.extend(
                         cont.iter()
                             .filter(|&p| (*p - *p1).norm() <= min_r || (*p - *p2).norm() <= min_r)
