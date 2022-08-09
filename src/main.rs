@@ -18,15 +18,22 @@ mod robust_fit;
 
 fn main() {
     let cli_args = CliArgs::parse();
+    let verbosity = cli_args.verbosity;
     let config_file = std::fs::read_to_string(cli_args.config).unwrap();
     let fit_args = serde_yaml::from_str::<FitArgs>(&config_file).unwrap();
 
+    if verbosity > 0 {
+        println!("Opening image with filename {:?}", cli_args.file);
+    }
     let img = ImageReader::open(cli_args.file.clone())
         .expect("Failed to open image")
         .decode()
         .expect("Failed to decode image");
     let img_flat = img.to_luma8();
 
+    if verbosity > 0 {
+        println!("Finding contours in the image...");
+    }
     let contours: Vec<Vec<Point<f64>>> =
         find_contours_with_threshold(&img_flat, fit_args.threshold)
             .into_iter()
@@ -44,14 +51,26 @@ fn main() {
                 ps
             })
             .collect::<Vec<_>>();
+    if verbosity > 0 {
+        println!("Found {} eligible contours!", contours.len());
+    }
 
+    if verbosity > 0 {
+        println!("Fitting ellipses to the contours...");
+    }
     let fit_results = contours[..]
         .par_iter()
         .map(|ps| robust_fit_ellipse(ps, &fit_args))
         .flatten()
         .collect::<Vec<_>>();
+    if verbosity > 0 {
+        println!("Found {} ellipses!", fit_results.len());
+    }
 
     if let Some(outfile) = cli_args.outfile {
+        if verbosity > 0 {
+            println!("Writing results to {:?}", outfile);
+        }
         let mut outfile = std::fs::File::create(outfile).expect("Failed to create output file");
         serde_json::to_writer_pretty(&mut outfile, &fit_results)
             .expect("Failed to write output file");
@@ -78,6 +97,9 @@ fn main() {
                 &ellipse_poly[..],
                 Rgba([0u8, 0, 255, 255]),
             );
+        }
+        if verbosity > 0 {
+            println!("Writing result image to {:?}", outimg);
         }
         img_with_fits.save(outimg).expect("Failed to save image");
     }

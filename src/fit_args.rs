@@ -23,6 +23,10 @@ pub struct CliArgs {
     /// If not specified, the output image is omitted
     #[clap(long, value_parser)]
     pub outimg: Option<PathBuf>,
+
+    /// Verbosity level
+    #[clap(short, long, parse(from_occurrences))]
+    pub verbosity: usize,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
