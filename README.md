@@ -24,7 +24,19 @@ In the `example_use` directory, an example configuration file is provided `confi
 ./target/release/particle_detect -c example_use/config.yaml -f example_use/img.bmp --outimg example_use/out.png --outfile example_use/out.json
 ```
 
-Which results in a JSON file `out.json` and an image `out.png` containing and showing the detected ellipses. Both output files are optional.
+Which results in a JSON file `out.json` and an image `out.png` containing and showing the detected ellipses. Both output files are optional. The output image is just a visualization of the detected ellipses, we usually do not need it, but it is useful for viusally assessing the quality of the detection. The output JSON file contains a list of detected ellipses, each ellipse is represented by a dictionary with the following keys:
+
+```json
+{
+    "a": 47.99351164808638,
+    "b": 11.796194030129517,
+    "x": 1063.9748000216746,
+    "y": 141.3909574884799,
+    "theta": -0.3875775553444095
+}
+```
+
+Where `a` and `b` are the major and minor axis lengths, `x` and `y` are the center of the ellipse, and `theta` is the orientation of the ellipse in radians.
 
 The accepted input and output image formats are `png`, `bmp` and `jpg`.
 
