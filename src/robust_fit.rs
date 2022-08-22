@@ -185,7 +185,7 @@ impl Ellipse {
 
 /// Robust ellipse fit on noisy data, based on
 /// Kaewapichai, W. and Kaewtrakulpong, P., 2008. Robust ellipse detection by fitting randomly selected edge patches. World Academy of Science, Engineering, and Technology, 48, pp.30-33.
-pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse> {
+pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs, samplemult: f64) -> Vec<Ellipse> {
     let mut center_of_mass = cont.iter().fold(Point::new(0.0, 0.0), |acc, p| acc + *p);
     center_of_mass.x /= cont.len() as f64;
     center_of_mass.y /= cont.len() as f64;
@@ -201,7 +201,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse
     let err: f64 = 0.6;
     let d = args.dist_threshold;
     let pvalue = 1. - err.powf(5.0);
-    let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * 50.) as usize;
+    let k = ((1. - pvalue).log2() / (1. - (1. - err).powf(5.0)).log2() * samplemult) as usize;
     let min_r = args.radius_threshold;
     let min_fittness = args.min_fitness;
     let mut best_ellipses: Vec<Ellipse> = vec![];
@@ -223,7 +223,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs) -> Vec<Ellipse
                 let p1 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let p2 = cont.get(fastrand::usize(..cont.len())).unwrap();
                 let distance = (*p1 - *p2).norm();
-                if (distance > min_r * 2.0 && distance < min_r * 10.0) || adding_tries > 100 {
+                if (distance > min_r * 2.0 && distance < min_r * 10.0) || adding_tries > 10000 {
                     sample.extend(
                         cont.iter()
                             .filter(|&p| (*p - *p1).norm() <= min_r || (*p - *p2).norm() <= min_r)

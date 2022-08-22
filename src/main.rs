@@ -58,11 +58,20 @@ fn main() {
     if verbosity > 0 {
         println!("Fitting ellipses to the contours...");
     }
-    let fit_results = contours[..]
-        .par_iter()
-        .map(|ps| robust_fit_ellipse(ps, &fit_args))
-        .flatten()
-        .collect::<Vec<_>>();
+    let fit_results = if cli_args.multithread != 0 {
+        contours[..]
+            .par_iter()
+            .map(|ps| robust_fit_ellipse(ps, &fit_args, cli_args.samplemult))
+            .flatten()
+            .collect::<Vec<_>>()
+    } else {
+        contours[..]
+            .iter()
+            .map(|ps| robust_fit_ellipse(ps, &fit_args, cli_args.samplemult))
+            .flatten()
+            .collect::<Vec<_>>()
+    };
+
     if verbosity > 0 {
         println!("Found {} ellipses!", fit_results.len());
     }

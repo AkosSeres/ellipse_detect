@@ -27,6 +27,16 @@ pub struct CliArgs {
     /// Verbosity level
     #[clap(short, long, parse(from_occurrences))]
     pub verbosity: usize,
+
+    /// Multiplier for the number of random samples to take.
+    /// If not specified, the default is 10. The higher the number,
+    /// the more accurate the fit will be, but also the computation takes longer.
+    #[clap(long, value_parser, default_value = "10")]
+    pub samplemult: f64,
+
+    /// If used, the program will utilize all available cores, otherwise it will use only one core.
+    #[clap(long, parse(from_occurrences))]
+    pub multithread: usize,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
