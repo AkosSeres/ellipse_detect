@@ -84,3 +84,7 @@ Where $N$ is the number of points in the contour with distance from the ellipse 
 The fitted ellipses are then sorted by their fitness score and the ellipse with the highest fitness score is the one that is chosen as the best fit. If none of the ellipses have a fitness higher than the `min_fitness` specified in the config file, then the algorithm terminates and no ellipses are found. Otherwise, if the best ellipse is eligible, then we save it and remove the contour points from the point set that are closer to the ellipse than the `dist_threshold`.
 
 Then we take random samples again and repeat this procedure until there are no more eligible ellipses left.
+
+## Multithreading
+
+The RANSAC algorithm can be run in parallel for each independent distinct contour, making the program run potentially several times faster. This feature can be turned on using the `--multithread` CLI option and it is turned off by default. When turned on, it will use all available CPU cores. Please also note that the binarization and contour detection steps are not parallelized.
