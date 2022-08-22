@@ -1,12 +1,12 @@
 use crate::fit_args::FitArgs;
 use clap::Parser;
+use ellipse_detect::fit_args::CliArgs;
 use image::{io::Reader as ImageReader, Rgba};
 use imageproc::{
     contours::{find_contours_with_threshold, Contour},
     drawing::draw_hollow_polygon_mut,
     point::Point,
 };
-use particle_detect::fit_args::CliArgs;
 use rayon::prelude::*;
 
 use crate::robust_fit::robust_fit_ellipse;

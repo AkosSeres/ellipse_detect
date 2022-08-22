@@ -1,5 +1,5 @@
 [package]
-name = "particle_detect"
+name = "ellipse_detect"
 version = "0.1.0"
 edition = "2021"
 

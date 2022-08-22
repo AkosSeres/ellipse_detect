@@ -15,13 +15,13 @@ cargo build --release
 For a short description of the available command line options, run:
 
 ```shell
-./target/release/particle_detect -h
+./target/release/ellipse_detect -h
 ```
 
 In the `example_use` directory, an example configuration file is provided `config.yaml`, along with a sample image `img.bmp`. We can run the program with the following command:
 
 ```shell
-./target/release/particle_detect -c example_use/config.yaml -f example_use/img.bmp --outimg example_use/out.png --outfile example_use/out.json
+./target/release/ellipse_detect -c example_use/config.yaml -f example_use/img.bmp --outimg example_use/out.png --outfile example_use/out.json
 ```
 
 Which results in a JSON file `out.json` and an image `out.png` containing and showing the detected ellipses. Both output files are optional. The output image is just a visualization of the detected ellipses, we usually do not need it, but it is useful for viusally assessing the quality of the detection. The output JSON file contains a list of detected ellipses, each ellipse is represented by a dictionary with the following keys:
