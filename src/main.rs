@@ -11,7 +11,6 @@ use rayon::prelude::*;
 
 use crate::robust_fit::robust_fit_ellipse;
 
-mod contour;
 mod fit_args;
 mod fit_ellipse;
 mod robust_fit;
