@@ -1,6 +1,6 @@
 # Robust ellipse detection written in Rust
 
-This program implements the RANSAC based robust ellipse fitting algorithm described by [W Kaewapichai, P Kaewtrakulpong (2008)](https://scholar.google.com/scholar?cluster=5586026904313573649&hl=en&as_sdt=2007). This implementation is written purely in Rust. It is capable of detecting ellipse shaped blobs where the ellipse is partially occluded or more of them are clustered together into a single blob.
+This program implements the RANSAC based robust ellipse fitting algorithm described by [W Kaewapichai, P Kaewtrakulpong (2008)](https://scholar.google.com/scholar?cluster=5586026904313573649&hl=en&as_sdt=2007) and uses it to find ellipse shaped particles in an image. This implementation is written purely in Rust. It is capable of detecting ellipse shaped blobs where the ellipse is partially occluded or more of them are clustered together into a single blob.
 
 ![Example picture](example.png)
 
