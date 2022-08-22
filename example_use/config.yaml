@@ -1,16 +1,32 @@
+# Threshold for binarization of the input image
 threshold: 35
+# The minumum fitness for a fit to be eligible (see readme for definition)
 min_fitness: 0.3
+# The distance treshold for calculating fitnesses
 dist_threshold: 2.0
+# The radius threshold for the distance between the chosen random points on the contour (see readme)
 radius_threshold: 6.0
+# The following values represent the min-max values for several filters that are applied to throw away unnecessary contours and ellipses
+# These filters improve the quality of the fittings and also speed up the computation
+# We can disable any of the filters manually by setting the minimum value to 0 and the maximum values to a suitably large number
+# The minimum and maximum allowed number of contour pixels in a contour
 min_contour_points: 50
 max_contour_points: 2000
+# The minimum and maximum allowed aspect ratio for fitted ellipses it is calculated by dividing the long axis length of the ellipse by the short axis length (L/d)
 min_aspect_ratio: 3.5
 max_aspect_ratio: 4.2
+# The minimum and maximum allowed length for the fitted ellipses, measured in pixel units
 min_length: 93.0
 max_length: 104.0
+# The minimum and maximum allowed width for the fitted ellipses, measured in pixel units
 min_width: 20.0
 max_width: 35.0
+# This last filter is descibed by 4 values
+# Here we define a center, around which we measure the radius (pixel coordinates)
 rotation_center_x: 1505
 rotation_center_y: 1485
+# And here we define the minimum and maximum allowed distance from the center defined above
+# Outside of this ring, no ellipses will be detected
+# We can disable this filter by setting detect_radius_min to 0 and detect_radius_max to a large number
 detect_radius_min: 800
 detect_radius_max: 1450
