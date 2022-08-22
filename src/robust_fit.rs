@@ -18,6 +18,8 @@ pub struct Ellipse {
 }
 
 impl Ellipse {
+    /// Creates a new Ellipse struct from the given parameters.
+    /// Theta is in radians.
     pub fn new(x: f64, y: f64, a: f64, b: f64, theta: f64) -> Self {
         let (tsin, tcos) = theta.sin_cos();
         Ellipse {
@@ -31,21 +33,12 @@ impl Ellipse {
         }
     }
 
+    /// Returns the perimeter of the ellipse
     pub fn perimeter(&self) -> f64 {
         2.0 * std::f64::consts::PI * (self.a * self.a + self.b * self.b).sqrt()
     }
 
-    fn is_inside(&self, x: f64, y: f64) -> bool {
-        let (x, y) = (x - self.x, y - self.y);
-        let (x, y) = (
-            self.theta.cos() * x - self.theta.sin() * y,
-            self.theta.sin() * x + self.theta.cos() * y,
-        );
-        let (a, b) = (self.a, self.b);
-        x * x / (a * a) + y * y / (b * b) <= 1.0
-    }
-
-    /// Distance of (px, py) point from the ellipse.
+    /// Exact distance of (px, py) point from the ellipse.
     /// Taken from:
     /// Chou, C.C., 2019. A closed-form general solution for the distance of point-to-ellipse in two dimensions. Journal of Interdisciplinary Mathematics, 22(3), pp.337-351.
     pub fn distance_from_perimeter(&self, px_: f64, py_: f64) -> f64 {
@@ -290,6 +283,7 @@ pub fn robust_fit_ellipse(cont: &Vec<Point<f64>>, args: &FitArgs, samplemult: f6
     best_ellipses
 }
 
+// Implement norm for external Point struct
 trait Norm {
     fn norm(&self) -> f64;
 }
