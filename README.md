@@ -51,7 +51,7 @@ The image is first binarized using a threshold, specified in the config file, th
 
 On the left side of the figure, the original image is shown. In the middle, we can see the binarized image and on the left, the contours around the binarized blobs are shown in red. The contours are a list of pixel coordinates on the border of the black blobs. We can see that the smaller contours are not highlighted in red, because they are excluded by a filter set in the config file.
 
-### Ellipse fitting
+### RANSAC and ellipse fitting
 
 Now we can apply the RANSAC algorithm to the detected contours. The algorithm is implemented in the `robust_fit.rs` file. The detailed description of the method can be found in the cited paper, here we only give a short overview.
 
@@ -61,8 +61,14 @@ The number of samples taken is by default a couple of hundred, but we can set th
 
 After getting the samples, we fit an ellipse onto each of them using the [direct least square method by A. Fitzgibbon, M. Pilu and R.B. Fisher](https://ieeexplore.ieee.org/document/765658). This algorithm is implemented in the `fit_ellipse.rs` file.
 
-For each fitted ellipse, we calculate its fittness score with the following formula:
+For each fitted ellipse, we calculate its __fitness__ score with the following formula:
 
 $$
 \text{fitness} = \frac{N}{\text{perimeter of ellipse}}
 $$
+
+Where $N$ is the number of points in the contour with distance from the ellipse perimeter smaller than `dist_threshold` and $\text{perimeter of ellipse}$ of course means the perimeter of the fitted ellipse, in pixel units.
+
+The fitted ellipses are then sorted by their fitness score and the ellipse with the highest fitness score is the one that is chosen as the best fit. If none of the ellipses have a fitness higher than the `min_fitness` specified in the config file, then the algorithm terminates and no ellipses are found. Otherwise, if the best ellipse is eligible, then we save it and remove the contour points from the point set that are closer to the ellipse than the `dist_threshold`.
+
+Then we take random samples again and repeat this procedure until there are no more eligible ellipses left.
