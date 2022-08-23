@@ -1,7 +1,7 @@
 use image::{GrayImage, Luma};
 use imageproc::{drawing::draw_hollow_polygon_mut, point::Point};
 
-use particle_detect::robust_fit::Ellipse;
+use ellipse_detect::robust_fit::Ellipse;
 
 fn main() {
     let mut figure = GrayImage::new(512, 512);

@@ -9,7 +9,7 @@ use opencv::{
     imgproc::fit_ellipse_direct,
     prelude::RotatedRectTraitConst,
 };
-use particle_detect::{fit_ellipse::fit_ellipse_dls, robust_fit::Ellipse};
+use ellipse_detect::{fit_ellipse::fit_ellipse_dls, robust_fit::Ellipse};
 
 fn main() {
     let mut figure = RgbImage::new(256, 256);
