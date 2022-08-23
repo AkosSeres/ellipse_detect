@@ -28,6 +28,7 @@ let scale = 1;
 let mouseIsDown = false;
 
 document.getElementById('canvas').addEventListener('mousedown', e => {
+    e.preventDefault();
     mouseIsDown = true;
 });
 document.addEventListener('mouseup', e => {
@@ -35,6 +36,7 @@ document.addEventListener('mouseup', e => {
 });
 document.addEventListener('mousemove', e => {
     if (mouseIsDown) {
+        e.preventDefault();
         offsetX += e.movementX;
         offsetY += e.movementY;
     }
@@ -42,8 +44,10 @@ document.addEventListener('mousemove', e => {
 document.getElementById('canvas').addEventListener('wheel', e => {
     let canvas = document.getElementById('canvas');
     let mutliplier = 1 / Math.exp(e.deltaY / 100);
-    let minScale = canvas.offsetWidth / image.width / 10;
-    let maxScale = canvas.offsetWidth / image.width * 50;
+    let imgW = image.width;
+    if (imgW === 0) imgW = canvas.offsetWidth;
+    let minScale = canvas.offsetWidth / imgW / 5;
+    let maxScale = canvas.offsetWidth / imgW * 40;
     if (scale * mutliplier > maxScale) {
         mutliplier = maxScale / scale;
     } else if (scale * mutliplier < minScale) {
