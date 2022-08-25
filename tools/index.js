@@ -37,8 +37,8 @@ document.addEventListener('mouseup', e => {
 document.addEventListener('mousemove', e => {
     if (mouseIsDown) {
         e.preventDefault();
-        offsetX += e.movementX;
-        offsetY += e.movementY;
+        offsetX += e.movementX / scale;
+        offsetY += e.movementY / scale;
     }
 });
 document.getElementById('canvas').addEventListener('wheel', e => {
@@ -54,10 +54,6 @@ document.getElementById('canvas').addEventListener('wheel', e => {
         mutliplier = minScale / scale;
     }
 
-    offsetX += canvas.offsetWidth / 2 * (1 - mutliplier);
-    offsetY += canvas.offsetHeight / 2 * (1 - mutliplier);
-    offsetX *= mutliplier;
-    offsetY *= mutliplier;
     scale *= mutliplier;
 });
 
@@ -83,11 +79,13 @@ window.addEventListener('drop', async (e) => {
         if (images.length > 0) {
             image = new Image();
             image.src = URL.createObjectURL(images[0]);
+            image.onload = () => {
+                let canvas = document.getElementById('canvas');
+                offsetX = 0;
+                offsetY = 0;
+                scale = canvas.width / image.width;
+            };
         }
-
-        offsetX = 0;
-        offsetY = 0;
-        scale = 1;
     }
 });
 
@@ -98,8 +96,9 @@ const drawFunc = () => {
     ctx.fillStyle = 'grey';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.translate(offsetX, offsetY);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
     ctx.scale(scale, scale);
+    ctx.translate(offsetX, offsetY);
 
     ctx.drawImage(image, 0, 0);
 
